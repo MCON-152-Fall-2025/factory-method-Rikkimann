@@ -65,6 +65,48 @@ class RecipeControllerTest {
 
     @Nested
     class CreationTests {
+        @Test
+        void testAddSoupRecipe_thenAnswer_andArgumentCaptor_andInOrder_andNoMoreInteractions() throws Exception {
+            ObjectNode json = mapper.createObjectNode();
+            json.put("type", "SoupRecipe");
+            json.put("title", "Soup");
+            json.put("description", "chicken soup");
+            json.put("ingredients", "carrot, zuchini");
+            json.put("instructions", "leave on the flame");
+            json.put("servings", 6);
+            String jsonString = mapper.writeValueAsString(json);
+
+            // thenAnswer: assign ID dynamically based on the request body
+            when(recipeService.addRecipe(any(Recipe.class))).thenAnswer(invocation -> {
+                Recipe r = invocation.getArgument(0);
+                return new Recipe(1L, r.getTitle(), r.getDescription(), r.getIngredients(), r.getInstructions(), 6);
+            });
+
+            mockMvc.perform(post("/api/recipes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(jsonString))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.title").value("Soup"))
+                    .andExpect(jsonPath("$.description").value("chicken soup"))
+                    .andExpect(jsonPath("$.ingredients").value("carrot, zuchini"))
+                    .andExpect(jsonPath("$.instructions").value("leave on the flame"))
+                    .andExpect(jsonPath("$.id").value(1));
+
+            // capture the Recipe passed into service
+            verify(recipeService).addRecipe(recipeCaptor.capture());
+            Recipe captured = recipeCaptor.getValue();
+            assertNull(captured.getId()); // ID is assigned in service, controller passes no ID
+            assertEquals("Soup", captured.getTitle());
+            assertInstanceOf(BasicRecipe.class, captured);
+
+            // verify order (only addRecipe is expected in this flow)
+            InOrder order = inOrder(recipeService);
+            order.verify(recipeService).addRecipe(any(Recipe.class));
+
+            // ensure nothing else on the service was called
+            verifyNoMoreInteractions(recipeService);
+        }
+
 
         @Test
         void testAddRecipe_thenAnswer_andArgumentCaptor_andInOrder_andNoMoreInteractions() throws Exception {
@@ -467,4 +509,5 @@ class RecipeControllerTest {
             verifyNoMoreInteractions(recipeService); // will fail if any other calls happened
         }
     }
+
 }
