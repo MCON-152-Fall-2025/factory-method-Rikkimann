@@ -6,6 +6,8 @@ import com.mcon152.recipeshare.service.RecipeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.List;
@@ -19,12 +21,15 @@ public class RecipeController {
         this.recipeService = recipeService;
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(RecipeController.class);
+
     /**
      * Create a new recipe.
      * Returns 201 Created with Location header pointing to the new resource.
      */
     @PostMapping
     public ResponseEntity<Recipe> addRecipe(@RequestBody RecipeRequest recipeRequest) {
+        logger.info("Incoming POST /api/recipes");
         try {
             Recipe toSave = RecipeFactory.createFromRequest(recipeRequest);
             Recipe saved = recipeService.addRecipe(toSave);
@@ -34,9 +39,11 @@ public class RecipeController {
                     .path("/{id}")                  // /{id}
                     .buildAndExpand(saved.getId())
                     .toUri();
+            logger.debug("Created recipe: {}, {}", saved.getName(), saved.getType());
 
             return ResponseEntity.created(location).body(saved);
         } catch (Exception e) {
+            logger.error("Error occurred while adding recipe: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -46,6 +53,7 @@ public class RecipeController {
      */
     @GetMapping
     public ResponseEntity<List<Recipe>> getAllRecipes() {
+        logger.info("Incoming GET /api/recipes");
         return ResponseEntity.ok(recipeService.getAllRecipes());
     }
 
@@ -54,6 +62,7 @@ public class RecipeController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<Recipe> getRecipeById(@PathVariable long id) {
+        logger.info("Incoming GET /api/recipes/{} (id={})", id, id);
         return recipeService.getRecipeById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -64,12 +73,15 @@ public class RecipeController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRecipe(@PathVariable long id) {
+        logger.info("Incoming DELETE /api/recipes/{} (id={})", id, id);
         try {
             boolean deleted = recipeService.deleteRecipe(id);
             return deleted
                     ? ResponseEntity.noContent().build()
                     : ResponseEntity.notFound().build();
+logger.info("deletion occured.");
         } catch (Exception e) {
+            logger.error("Error occurred while deleting recipe: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -79,7 +91,9 @@ public class RecipeController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<Recipe> updateRecipe(@PathVariable long id, @RequestBody RecipeRequest updatedRequest) {
+        logger.info("Incoming PUT /api/recipes/{} (id={})", id, id);
         Recipe updatedRecipe = RecipeFactory.createFromRequest(updatedRequest);
+        logger.debug("Created recipe: {}, {}", saved.getName(), saved.getType());
         return recipeService.updateRecipe(id, updatedRecipe)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -90,7 +104,9 @@ public class RecipeController {
      */
     @PatchMapping("/{id}")
     public ResponseEntity<Recipe> patchRecipe(@PathVariable long id, @RequestBody RecipeRequest partialRequest) {
+        logger.info("Incoming PATCH /api/recipes/{} (id={})", id, id);
         Recipe partialRecipe = RecipeFactory.createFromRequest(partialRequest);
+        logger.debug("Created recipe: {}, {}", saved.getName(), saved.getType());
         return recipeService.patchRecipe(id, partialRecipe)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
